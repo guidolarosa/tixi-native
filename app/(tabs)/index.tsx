@@ -1,74 +1,150 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import {
+  StyleSheet,
+  TextInput,
+  View,
+  Pressable,
+  ImageBackground,
+  Dimensions,
+  ScrollView,
+  SafeAreaView,
+} from "react-native";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from "@/components/ThemedText";
+import { Colors } from "@/constants/Colors";
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import CustomCarousel from "@/components/Carousel";
+import useEvents from "@/utils/queries/useEvents";
+import useHome from "@/utils/queries/useHome";
+import PosterCarousel from "@/components/PosterCarousel";
+import { WebView } from "react-native-webview";
+
+import { toHTML } from "@portabletext/to-html";
+
+const portableTextToHtml = (portableText) => {
+  return toHTML(portableText, {
+    components: {
+      // Optionally define serializers for custom Portable Text types.
+      types: {
+        // Example: Serialize image objects
+        image: ({ value }) =>
+          `<img src="${value.asset.url}" alt="${value.alt || ""}" />`,
+      },
+    },
+  });
+};
 
 export default function HomeScreen() {
+  const { data: events, isLoading, error } = useEvents();
+  const { data: home } = useHome();
+
+  const htmlContent = home?.artist_of_the_month?.bio
+    ? `<html><body style="color: white; font-family: 'Arial'; font-size: 48px">${toHTML(home.artist_of_the_month.bio)}</body></html>`
+    : `<html><body><p>No content available.</p></body></html>`;
+
+  console.log("HTML: ", htmlContent);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
+    <ScrollView style={{ marginVertical: 10 }}>
+      <View
+        style={{
+          paddingHorizontal: 20,
+        }}
+      >
+        <View style={styles.textInputWrapper}>
+          <FontAwesome5 name="search" size={16} color="rgba(255,255,255,0.5)" />
+          <TextInput
+            style={styles.textInput}
+            placeholder="Search for shows in your area..."
+          />
+          <Pressable
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+            }}
+            onPress={() => {
+              console.log("Filter");
+            }}
+          >
+            <View
+              style={{
+                height: 16,
+                width: 1,
+                backgroundColor: "rgba(255,255,255,0.3)",
+                marginRight: 10,
+              }}
+            />
+            <MaterialCommunityIcons
+              name="tune-variant"
+              size={20}
+              color="rgba(255,255,255,0.5)"
+            />
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={{ marginTop: 24 }}>
+        <ThemedText style={styles.sectionHeading}>Featured</ThemedText>
+        <View style={{ height: 200 + 60 }}>
+          <CustomCarousel data={home?.featuredEvents} />
+        </View>
+      </View>
+      <View style={{ marginTop: 24 }}>
+        <ThemedText style={styles.sectionHeading}>Featured</ThemedText>
+        <View style={{ height: 280 + 60 }}>
+          <PosterCarousel data={events} />
+        </View>
+      </View>
+      <View style={{ marginTop: 24 }}>
+        <ThemedText style={styles.sectionHeading}>
+          Artist of the Month
         </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        <View style={{ paddingHorizontal: 20 }}>
+          <ImageBackground
+            style={{
+              height: Dimensions.get("screen").width - 50,
+            }}
+            imageStyle={{ borderRadius: 10 }}
+            source={{ uri: home?.artist_of_the_month.image }}
+            resizeMode="cover"
+          ></ImageBackground>
+          <View style={styles.container}>
+            <WebView
+              originWhitelist={["*"]}
+              source={{ html: htmlContent }}
+              style={styles.webView}
+            />
+          </View>
+        </View>
+      </View>
+      <SafeAreaView style={{ height: 100 }} />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: { flex: 1, backgroundColor: 'transparent' },
+  webView: { flex: 1, height: 240, backgroundColor: 'transparent', marginTop: 10, opacity: 0.8},
+  textInputWrapper: {
+    display: "flex",
+    flexDirection: "row",
+    backgroundColor: Colors.dark.background,
+    height: 40,
+    borderRadius: 100,
+    alignItems: "center",
+    paddingHorizontal: 12,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  textInput: {
+    color: "white",
+    paddingHorizontal: 10,
+    flexGrow: 1,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  sectionHeading: {
+    textTransform: "uppercase",
+    fontWeight: 500,
+    letterSpacing: 2,
+    marginBottom: 14,
+    paddingHorizontal: 20,
   },
 });
